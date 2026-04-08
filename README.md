@@ -42,10 +42,9 @@ Este projeto foi desenvolvido como solução para um desafio técnico de engenha
 └─────────────┘     │   ├─ formatar_csv()   (pandas)            │     │                    │
                     │   └─ enviar_para_solr() (pysolr)          │     └────────────────────┘
                     └───────────────────────────────────────────┘
-                                        │
-                            ┌───────────┴───────────┐
-                            │  PostgreSQL (metadata) │
-                            └───────────────────────┘
+                                        
+                            
+                            
 ```
 
 Todos os serviços são definidos e inicializados via `docker-compose.yml`.
