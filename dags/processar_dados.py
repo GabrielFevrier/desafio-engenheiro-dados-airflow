@@ -2,14 +2,12 @@ import subprocess
 import sys
 import os
 
-# CONFIGURAÇÕES PARA AMBIENTE DOCKER
-# 1. No Docker, usamos o nome do serviço 'solr_instance' em vez de 'localhost'
-SOLR_URL = 'http://solr_instance:8983/solr/desafio_core'
 
-# 2. O caminho deve ser o caminho INTERNO do container (onde montamos o volume)
+
+SOLR_URL = 'http://solr_instance:8983/solr/desafio_core'
 CAMINHO_CSV = '/opt/airflow/dags/data/aluno.csv'
 
-def instalar_dependencias():
+def instalar_dependencias(): #força instalação das bibliotecas evitando errosS
     subprocess.check_call([sys.executable, "-m", "pip", "install", "pysolr", "pandas"])
 
 def formatar_csv(path, separador=',', encoding='utf-8'):
@@ -20,12 +18,12 @@ def formatar_csv(path, separador=',', encoding='utf-8'):
             print(f"❌ Arquivo não encontrado no caminho interno: {path}")
             return None
 
-        df = pd.read_csv(path, sep=separador, encoding=encoding)
+        df = pd.read_csv(path, sep=separador, encoding=encoding) #Remove os espaços para evitar erros
         df.columns = df.columns.str.strip()
         print(f"✅ Arquivo '{path}' importado com sucesso!")
         
         try:
-            # Conversão numérica (usando nomes exatos do seu CSV)
+            # Conversão numérica para tipo correto
             df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce').fillna(0).astype(int)
             df['Série'] = pd.to_numeric(df['Série'], errors='coerce').fillna(0).astype(int)
             df['Nota Média'] = pd.to_numeric(df['Nota Média'], errors='coerce').fillna(0.0).astype(float)
@@ -38,7 +36,7 @@ def formatar_csv(path, separador=',', encoding='utf-8'):
                 
             # Tratamento de Data (corrigido para evitar erro de atribuição em série)
             df['Data de Nascimento'] = pd.to_datetime(df['Data de Nascimento'], errors='coerce')
-            df['Data de Nascimento'] = df['Data de Nascimento'].dt.strftime('%Y-%m-%dT%H:%M:%SZ').fillna('1900-01-01T00:00:00Z')
+            df['Data de Nascimento'] = df['Data de Nascimento'].dt.strftime('%Y-%m-%dT%H:%M:%SZ').fillna('1900-01-01T00:00:00Z') #Padrão do Solr 
 
         except Exception as e:
             print(f"⚠️ Alerta na conversão de tipos: {e}")
