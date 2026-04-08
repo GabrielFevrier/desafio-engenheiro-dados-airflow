@@ -1,89 +1,210 @@
-Markdown
-# 🚀 Pipeline de Dados: Airflow + Apache Solr
+# Pipeline de Dados: Airflow + Apache Solr
 
-![Airflow](https://img.shields.io/badge/Airflow-017CEE?style=for-the-badge&logo=Apache%20Airflow&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Solr](https://img.shields.io/badge/Solr-D9411E?style=for-the-badge&logo=Apache%20Solr&logoColor=white)
+![Airflow](https://img.shields.io/badge/Apache%20Airflow-2.7.1-017CEE?style=flat-square&logo=Apache%20Airflow&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Solr](https://img.shields.io/badge/Apache%20Solr-latest-D9411E?style=flat-square&logo=Apache%20Solr&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-3.x-150458?style=flat-square&logo=pandas&logoColor=white)
 
-## 📑 Sumário  
-1. [Sobre o Projeto](#-sobre-o-projeto)  
-2. [Tecnologias Utilizadas](#-tecnologias-utilizadas)  
-3. [Estrutura do Projeto](#-estrutura-do-projeto)  
-4. [Lógica do Fluxo de Dados](#-lógica-do-fluxo-de-dados)  
-5. [Passo-a-passo de Execução](#-passo-a-passo-de-execução)  
+Pipeline de dados orquestrado pelo **Apache Airflow** que realiza a leitura, limpeza e indexação de registros acadêmicos no motor de busca **Apache Solr**, com toda a infraestrutura containerizada via **Docker Compose**.
 
 ---
 
-# 📊 Sobre o Projeto
+## Sumário
 
-Este projeto demonstra a criação de um pipeline de dados automatizado para o processamento e indexação de informações acadêmicas.
-
-🎯 **Objetivo:** Extrair dados de um arquivo CSV bruto (`aluno.csv`), realizar o tratamento e limpeza dos dados via Python e carregar as informações no motor de busca **Apache Solr**, utilizando o **Apache Airflow** como orquestrador.
-
----
-
-# 🛠 Tecnologias Utilizadas
-
-- **Orquestração:** Apache Airflow 2.7.1
-- **Linguagem:** Python 3.8+ (Pandas, PySolr)
-- **Infraestrutura:** Docker & Docker Compose
-- **Destino:** Apache Solr 8.11
+- [Visão Geral](#visão-geral)
+- [Arquitetura](#arquitetura)
+- [Tecnologias](#tecnologias)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [Fluxo de Dados](#fluxo-de-dados)
+- [Como Executar](#como-executar)
+- [Verificação dos Resultados](#verificação-dos-resultados)
 
 ---
 
-# 🗂 Estrutura do Projeto
+## Visão Geral
 
-```text
+Este projeto foi desenvolvido como solução para um desafio técnico de engenharia de dados. O objetivo é construir um pipeline ETL completo que:
+
+1. **Extrai** dados brutos de um arquivo CSV (`aluno.csv`) com informações de alunos do ensino básico
+2. **Transforma** os dados aplicando limpeza, tipagem e padronização com Python e Pandas
+3. **Carrega** os documentos formatados no Apache Solr para indexação e busca
+
+---
+
+## Arquitetura
+
+```
+┌─────────────┐     ┌───────────────────────────────────────────┐     ┌────────────────────┐
+│             │     │              Apache Airflow                │     │                    │
+│  aluno.csv  │────▶│  DAG: dag_importacao_solr                  │────▶│    Apache Solr     │
+│             │     │  Task: processar_e_enviar_dados            │     │  core: desafio_core│
+└─────────────┘     │   ├─ formatar_csv()   (pandas)            │     │                    │
+                    │   └─ enviar_para_solr() (pysolr)          │     └────────────────────┘
+                    └───────────────────────────────────────────┘
+                                        │
+                            ┌───────────┴───────────┐
+                            │  PostgreSQL (metadata) │
+                            └───────────────────────┘
+```
+
+Todos os serviços são definidos e inicializados via `docker-compose.yml`.
+
+---
+
+## Tecnologias
+
+| Camada | Tecnologia | Versão |
+|---|---|---|
+| Orquestração | Apache Airflow | 2.7.1 |
+| Processamento | Python + Pandas | 3.8+ / 3.x |
+| Integração Solr | PySolr | 3.11.0 |
+| Indexação | Apache Solr | latest |
+| Metadados do Airflow | PostgreSQL | 13 |
+| Infraestrutura | Docker + Docker Compose | — |
+
+---
+
+## Estrutura do Projeto
+
+```
 airflow/
 │
 ├── dags/
-│   ├── dag_desafio.py          # Definição da DAG e orquestração
-│   ├── processar_dados.py      # Lógica de ETL e conexão com Solr
+│   ├── dag_desafio.py          # Definição da DAG e orquestração da task
+│   ├── processar_dados.py      # Lógica de ETL e integração com o Solr
 │   └── data/
-│       └── aluno.csv           # Arquivo bruto de origem
+│       └── aluno.csv           # Arquivo de origem com dados brutos
 │
-├── logs/
-│   └── .gitkeep                # Estrutura para logs de execução
+├── logs/                       # Logs gerados pelo Airflow em execução
+│   └── .gitkeep
 ├── plugins/
-│   └── .gitkeep                # Estrutura para plugins customizados
+│   └── .gitkeep
 │
-├── docker-compose.yaml         # Configuração do ambiente (Airflow + Solr + DB)
-├── .gitignore                  # Filtro de arquivos para o repositório
-└── README.md                   # Documentação do projeto
-🔄 Lógica do Fluxo de Dados
-O pipeline é executado de forma manual ou agendada através da DAG dag_importacao_solr.
+├── docker-compose.yml          # Definição dos serviços (Airflow + Solr + PostgreSQL)
+├── requirements.txt            # Dependências Python do projeto
+├── .gitignore
+└── README.md
+```
 
-Leitura: O arquivo aluno.csv é lido do diretório de dados local.
+---
 
-Transformação: O Python (Pandas) realiza a limpeza, tipagem de campos (como datas e notas) e gera IDs únicos para cada documento.
+## Fluxo de Dados
 
-Carga: Utilizando a biblioteca pysolr, os dados são enviados para o core do Apache Solr para indexação imediata.
+A DAG `dag_importacao_solr` contém uma única task (`processar_e_enviar_dados`) que executa o pipeline completo em sequência, chamando duas funções do módulo `processar_dados.py`:
 
-▶ Passo-a-passo de Execução
-1. Preparação
-Certifique-se de ter o Docker e o Git instalados. Clone o repositório:
+### `formatar_csv()`
 
-Bash
-git clone [https://github.com/GabrielFevrier/desafio-engenheiro-dados-airflow.git](https://github.com/GabrielFevrier/desafio-engenheiro-dados-airflow.git)
-2. Inicialização do Ambiente
-Dentro da pasta do projeto, suba os containers:
+Responsável pela etapa de transformação dos dados brutos:
 
-Bash
-docker-compose up -d
-3. Instalação de Dependências
-Como o Airflow roda em containers isolados, instale as bibliotecas necessárias no Scheduler:
+- Leitura do `aluno.csv` com fallback automático de encoding (UTF-8 → latin-1)
+- Remoção de espaços em branco nos cabeçalhos das colunas
+- Conversão de tipos: `Idade` e `Série` → inteiro, `Nota Média` → float
+- Limpeza de strings nas colunas de texto (`Nome`, `Endereço`, `Nome do Pai`, `Nome da Mãe`)
+- Padronização de `Data de Nascimento` para o formato ISO 8601 (`yyyy-MM-ddTHH:mm:ssZ`)
+- Tratamento de valores nulos com preenchimento de defaults seguros
 
-Bash
-docker exec -u 0 -it airflow-scheduler-1 pip install pysolr pandas
-4. Execução da DAG
-Acesse o Airflow em http://localhost:8080 (Login/Senha: airflow).
+### `enviar_para_solr()`
 
-Ative a DAG dag_importacao_solr.
+Responsável pela etapa de carga no core `desafio_core` do Solr:
 
-Clique no botão Trigger para iniciar o processamento.
+- Instalação de dependências em runtime via `pip` (compatível com a imagem base do Airflow)
+- Conexão ao Solr pelo nome de serviço interno do Docker (`solr_instance:8983`)
+- Conversão do DataFrame para lista de documentos e envio via `pysolr`
+- Commit automático ao final da inserção (`always_commit=True`)
+- Tratamento de exceções com re-raise para que o Airflow registre a task como `Failed`
 
-5. Verificação dos Resultados
-Acesse o painel do Solr em http://localhost:8983 para consultar os 156 documentos indexados.
+---
 
-✨ Projeto desenvolvido por Gabriel Fevrier
+## Como Executar
+
+### Pré-requisitos
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e em execução
+- [Git](https://git-scm.com/) instalado (Opcional)
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/GabrielFevrier/desafio-engenheiro-dados-airflow.git
+cd desafio-engenheiro-dados-airflow
+```
+
+### 2. Inicialize o banco de metadados do Airflow
+
+Este passo é necessário apenas na primeira execução:
+
+```bash
+docker compose run --rm scheduler airflow db init
+```
+
+### 3. Suba os containers
+
+```bash
+docker compose up -d
+```
+
+> O primeiro start pode levar 1–2 minutos enquanto as imagens são baixadas e os serviços inicializam.
+
+### 4. Instale as dependências Python no Scheduler e no Webserver
+
+Como a imagem base do Airflow não inclui as bibliotecas do projeto, instale-as nos containers em execução:
+
+```bash
+docker compose exec scheduler pip install pysolr pandas
+docker compose exec webserver pip install pysolr pandas
+```
+
+### 5. Acesse o Airflow
+
+Abra [http://localhost:8080](http://localhost:8080) no navegador.
+
+| Campo | Valor |
+|---|---|
+| Usuário | `airflow` |
+| Senha | `airflow` |
+
+### 6. Execute o pipeline
+
+1. Localize a DAG `dag_importacao_solr` na listagem
+2. Ative a DAG pelo toggle lateral (caso esteja pausada)
+3. Clique em **Trigger DAG** para iniciar a execução manualmente
+4. Acompanhe o progresso em **Graph View** ou nos **Logs** da task `processar_e_enviar_dados`
+
+---
+
+## Verificação dos Resultados
+
+Após a DAG concluir com sucesso, acesse o painel administrativo do Solr:
+
+```
+http://localhost:8983/solr
+```
+
+Para consultar os documentos indexados diretamente via API:
+
+```
+http://localhost:8983/solr/desafio_core/select?q=*:*&rows=10&wt=json
+```
+
+O core `desafio_core` deve conter **80 documentos** indexados ao final da execução.
+
+---
+
+## Encerrando o Ambiente
+
+Para parar os containers sem remover os dados:
+
+```bash
+docker compose down
+```
+
+Para remover containers e volumes (reinício limpo):
+
+```bash
+docker compose down -v
+```
+
+---
+
+Desenvolvido por [Gabriel Fevrier](https://github.com/GabrielFevrier)
