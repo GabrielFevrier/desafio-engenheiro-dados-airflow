@@ -180,12 +180,6 @@ Após a DAG concluir com sucesso, acesse o painel administrativo do Solr:
 http://localhost:8983/solr
 ```
 
-Para consultar os documentos indexados diretamente via API:
-
-```
-http://localhost:8983/solr/desafio_core/select?q=*:*&rows=10&wt=json
-```
-
 O core `desafio_core` deve conter **80 documentos** indexados ao final da execução.
 
 ---
